@@ -1,7 +1,7 @@
 # Booking-Service
 
 ## Guide
-### DB (PostgreSQL)
+### DB (PostgreSQL) (docker needs to be running for this to work)
 - run `docker compose up -d` in the root directory
 ### Application
 - run `dotnet run` in the booking-service directory
