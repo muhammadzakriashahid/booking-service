@@ -1,3 +1,4 @@
+using System.Reflection;
 using BookingService.Data;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -15,8 +16,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+var isOpenApiGeneration =
+    Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
+
+if (!isOpenApiGeneration)
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider
         .GetRequiredService<BookingDbContext>();
 
