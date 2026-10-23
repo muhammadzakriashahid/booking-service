@@ -3,6 +3,7 @@ using BookingService.DTOs;
 using BookingService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BookingService.Clients;
 
 namespace BookingService.Controllers;
 
@@ -11,10 +12,14 @@ namespace BookingService.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly BookingDbContext dbContext;
+    private readonly IShowtimeApiClient showtimeClient;
 
-    public BookingsController(BookingDbContext dbContext)
+    public BookingsController(
+        BookingDbContext dbContext,
+        IShowtimeApiClient showtimeClient)
     {
         this.dbContext = dbContext;
+        this.showtimeClient = showtimeClient;
     }
 
     [HttpGet]
@@ -95,12 +100,53 @@ public class BookingsController : ControllerBase
             return BadRequest("X-Customer-Email header is required for now.");
         }
 
+        ShowtimeDetailDto showtime;
+
+        try
+        {
+            showtime = await showtimeClient.GetShowtimeByIdAsync(
+                request.ShowtimeId,
+                cancellationToken);
+        }
+        catch (ApiException exception)
+            when (exception.StatusCode == StatusCodes.Status404NotFound)
+        {
+            return NotFound("The requested showtime does not exist.");
+        }
+        catch (ApiException)
+        {
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                "The showtime service returned an error.");
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                "The showtime service is unavailable.");
+        }
+
+        if (showtime.SeatLabels is null)
+        {
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                "The showtime service did not return seat labels.");
+        }
+
+        foreach (var seat in request.Seats)
+        {
+            if (!showtime.SeatLabels.Contains(seat, StringComparer.OrdinalIgnoreCase))
+            {
+                return BadRequest($"Seat '{seat}' does not exist for this showtime.");
+            }
+        }
+
         var booking = new Booking
         {
             ShowtimeId = request.ShowtimeId,
             CustomerEmail = customerEmail,
             Status = "Pending",
-            TotalPrice = 0m,
+            TotalPrice = (decimal)showtime.Price * request.Seats.Count,
             Seats = request.Seats
                 .Select(seatLabel => new BookingSeat
                 {

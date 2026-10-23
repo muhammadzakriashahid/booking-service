@@ -1,5 +1,6 @@
 using System.Reflection;
 using BookingService.Data;
+using BookingService.Clients;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -13,6 +14,21 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+var showtimeBaseUrl = builder.Configuration["ShowtimeService:BaseUrl"]
+    ?? throw new InvalidOperationException(
+        "Configuration value 'ShowtimeService:BaseUrl' is required.");
+
+if (!Uri.TryCreate(showtimeBaseUrl, UriKind.Absolute, out var showtimeBaseAddress))
+{
+    throw new InvalidOperationException(
+        "'ShowtimeService:BaseUrl' must be an absolute URL.");
+}
+
+builder.Services.AddHttpClient<IShowtimeApiClient, ShowtimeApiClient>(client =>
+{
+    client.BaseAddress = showtimeBaseAddress;
+});
 
 var app = builder.Build();
 
