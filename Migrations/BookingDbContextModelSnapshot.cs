@@ -84,6 +84,34 @@ namespace booking_service.Migrations
                     b.ToTable("Seats");
                 });
 
+            modelBuilder.Entity("BookingService.Models.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedAtUtc", "OccurredAtUtc");
+
+                    b.ToTable("OutboxMessages");
+                });
+
             modelBuilder.Entity("BookingService.Models.BookingSeat", b =>
                 {
                     b.HasOne("BookingService.Models.Booking", "Booking")

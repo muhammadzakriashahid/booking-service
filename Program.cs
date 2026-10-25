@@ -1,6 +1,7 @@
 using System.Reflection;
 using BookingService.Data;
 using BookingService.Clients;
+using BookingService.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -14,6 +15,9 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<RabbitMqPublisher>();
+builder.Services.AddHostedService<OutboxDispatcher>();
 
 var showtimeBaseUrl = builder.Configuration["ShowtimeService:BaseUrl"]
     ?? throw new InvalidOperationException(

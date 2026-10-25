@@ -12,6 +12,7 @@ public class BookingDbContext : DbContext
 
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingSeat> Seats => Set<BookingSeat>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,25 @@ public class BookingDbContext : DbContext
             })
             .IsUnique()
             .HasFilter("\"IsActive\" = TRUE");
+        });
+
+        modelBuilder.Entity<OutboxMessage>(entity =>
+        {
+            entity.HasKey(message => message.Id);
+
+            entity.Property(message => message.MessageType)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(message => message.Payload)
+                .IsRequired()
+                .HasColumnType("text");
+
+            entity.HasIndex(message => new
+            {
+                message.PublishedAtUtc,
+                message.OccurredAtUtc
+            });
         });
     }
 }

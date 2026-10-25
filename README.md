@@ -18,3 +18,9 @@
 > db → `Npgsql.EntityFrameworkCore.PostgreSQL` \
 > db interface (inp/out) → `Microsoft.EntityFrameworkCore.Design` \
 > open api gen → `Microsoft.Extensions.ApiDescription.Server`
+*** 
+## example api guide
+### how to create booking
+- get all showtimes from showtime-service → v1/showtimes
+- get specific showtime info → v1/showtimes/{id}
+- create booking using that `id`, select of the provided `seats` and add 'x-customer-email'

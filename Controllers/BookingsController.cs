@@ -4,6 +4,9 @@ using BookingService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookingService.Clients;
+using System.Text.Json;
+using BookingService.Messaging;
+using Npgsql;
 
 namespace BookingService.Controllers;
 
@@ -21,6 +24,8 @@ public class BookingsController : ControllerBase
         this.dbContext = dbContext;
         this.showtimeClient = showtimeClient;
     }
+
+    private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
 
     [HttpGet]
     public async Task<ActionResult<List<BookingResponseDto>>> GetBookings(
@@ -156,13 +161,47 @@ public class BookingsController : ControllerBase
                 .ToList()
         };
 
+        var eventId = Guid.NewGuid();
+
+        var bookingCreatedEvent = new BookingCreatedV1(
+            EventId: eventId,
+            EventType: "booking.created",
+            SchemaVersion: 1,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            CorrelationId:
+                Request.Headers["X-Correlation-ID"].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("N"),
+            Producer: "booking-service",
+            Data: new BookingCreatedData(
+                BookingId: booking.Id,
+                ShowtimeId: booking.ShowtimeId,
+                Seats: booking.Seats
+                    .Select(seat => seat.SeatLabel)
+                    .ToList(),
+                TotalPrice: booking.TotalPrice));
+
+        var outboxMessage = new OutboxMessage
+        {
+            Id = eventId,
+            MessageType = "booking.created.v1",
+            Payload = JsonSerializer.Serialize(
+                bookingCreatedEvent,
+                EventJsonOptions),
+            OccurredAtUtc = bookingCreatedEvent.OccurredAtUtc
+        };
+
         dbContext.Bookings.Add(booking);
+        dbContext.OutboxMessages.Add(outboxMessage);
 
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception) when (
+            exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            })
         {
             return Conflict("One or more selected seats are already booked.");
         }
