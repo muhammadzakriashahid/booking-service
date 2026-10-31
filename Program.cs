@@ -18,6 +18,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<RabbitMqPublisher>();
 builder.Services.AddHostedService<OutboxDispatcher>();
+builder.Services.AddHostedService<PaymentCompletedConsumer>();
 
 var showtimeBaseUrl = builder.Configuration["ShowtimeService:BaseUrl"]
     ?? throw new InvalidOperationException(
