@@ -7,10 +7,12 @@ using BookingService.Clients;
 using System.Text.Json;
 using BookingService.Messaging;
 using Npgsql;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookingService.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("v1/bookings")]
 public class BookingsController : ControllerBase
 {
@@ -98,11 +100,11 @@ public class BookingsController : ControllerBase
             return BadRequest("A seat cannot be selected more than once.");
         }
 
-        var customerEmail = Request.Headers["X-Customer-Email"].FirstOrDefault();
+        var customerEmail = User.FindFirst("email")?.Value;
 
         if (string.IsNullOrWhiteSpace(customerEmail))
         {
-            return BadRequest("X-Customer-Email header is required for now.");
+            return Forbid();
         }
 
         ShowtimeDetailDto showtime;

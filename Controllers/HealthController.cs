@@ -1,4 +1,5 @@
 using BookingService.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,7 @@ public class HealthController : ControllerBase
     }
 
     [HttpGet("ready")]
+    [AllowAnonymous]
     public async Task<IActionResult> Ready(
         CancellationToken cancellationToken)
     {
